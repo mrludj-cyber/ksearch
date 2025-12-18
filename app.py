@@ -11,7 +11,7 @@ app = Flask(__name__)
 # ==========================================
 # ★ 아이디/비번 설정 (원하는대로 변경 가능)
 USERNAME = "admin"
-PASSWORD = "1234"
+PASSWORD = "43212345"
 # ==========================================
 
 BASE_URL = "https://yadong7.com"
@@ -26,11 +26,25 @@ HTML_TEMPLATE = """
 <html lang="ko" data-bs-theme="dark">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    
+    <!-- ★★★ 1. 웹앱 제목 (홈 화면에 추가될 이름) ★★★ -->
     <title>System Monitor</title>
+
+    <!-- ★★★ 2. 아이콘 설정 (차트 모양 📈 으로 위장) ★★★ -->
+    <!-- 브라우저 탭 아이콘 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
+    <!-- 아이폰/안드로이드 홈 화면 아이콘 -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%231e1e1e%22/><text x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2280%22>📈</text></svg>">
+
+    <!-- ★★★ 3. 주소창 없애기 (앱처럼 보이게) ★★★ -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #121212; color: #e0e0e0; }
+        body { background-color: #121212; color: #e0e0e0; -webkit-tap-highlight-color: transparent; }
         .card { background-color: #1e1e1e; border: none; margin-bottom: 20px; }
         .card-img-top { height: 160px; object-fit: cover; cursor: pointer; }
         .card-title { font-size: 0.85rem; margin-top: 8px; height: 38px; overflow: hidden; }
@@ -43,13 +57,16 @@ HTML_TEMPLATE = """
         .rank-badge { display: inline-block; width: 20px; text-align: center; margin-right: 8px; font-weight: bold; color: #fff; background-color: #dc3545; border-radius: 4px; font-size: 0.8rem; }
         
         /* 페이지네이션 스타일 */
-        .pagination-container { margin-top: 30px; margin-bottom: 50px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; }
+        .pagination-container { margin-top: 30px; margin-bottom: 80px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; }
         .btn-page { min-width: 50px; font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="container mt-4">
-    <h1 class="text-center mb-4"><span style="color:#fe1117;">SYS</span> MONITOR</h1>
+    <!-- 상단 타이틀 -->
+    <h1 class="text-center mb-4" onclick="location.reload()" style="cursor:pointer">
+        <span style="color:#fe1117;">SYS</span> MONITOR
+    </h1>
 
     <!-- 1. 주간/월간 베스트 영역 -->
     <div class="row">
@@ -76,7 +93,7 @@ HTML_TEMPLATE = """
     
     <div id="loading" class="text-center py-5"><div class="spinner-border text-danger"></div></div>
 
-    <!-- 2. 페이지네이션 (요청하신 6개 버튼) -->
+    <!-- 2. 페이지네이션 -->
     <div class="pagination-container" id="pagination-box"></div>
 
 </div>
@@ -104,7 +121,7 @@ HTML_TEMPLATE = """
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 let currentPage = 1;
-let lastPage = 1000; // 기본값 (서버에서 가져오면 갱신됨)
+let lastPage = 1000;
 
 document.addEventListener('DOMContentLoaded', () => fetchData(1));
 
@@ -112,6 +129,7 @@ async function fetchData(page) {
     currentPage = page;
     document.getElementById('video-grid').innerHTML = '';
     document.getElementById('loading').style.display = 'block';
+    window.scrollTo(0,0);
     
     try {
         const res = await fetch(`/api/list?page=${page}`);
@@ -119,11 +137,9 @@ async function fetchData(page) {
         
         const data = await res.json();
         
-        // 베스트 리스트 렌더링
         renderBest('weekly-best', data.weekly);
         renderBest('monthly-best', data.monthly);
         
-        // 메인 리스트 렌더링
         const grid = document.getElementById('video-grid');
         data.main.forEach(item => {
             grid.innerHTML += `
@@ -137,26 +153,21 @@ async function fetchData(page) {
                 </div>`;
         });
 
-        // 마지막 페이지 정보 업데이트
         if(data.last_page) lastPage = parseInt(data.last_page);
-
-        // 페이지네이션 업데이트
         renderPagination();
         document.getElementById('current-page').innerText = page;
 
     } catch(e) {
-        alert('로딩 실패: ' + e);
+        // 에러 무시
     } finally {
         document.getElementById('loading').style.display = 'none';
     }
 }
 
-// 베스트 리스트 그리기
 function renderBest(id, list) {
     const ul = document.getElementById(id);
     ul.innerHTML = '';
     if(!list || list.length === 0) { ul.innerHTML = '<li>데이터 없음</li>'; return; }
-    
     list.forEach((item, idx) => {
         const li = document.createElement('li');
         li.innerHTML = `<span class="rank-badge">${idx+1}</span> ${item.title}`;
@@ -165,56 +176,32 @@ function renderBest(id, list) {
     });
 }
 
-// 페이지네이션 그리기 (요청하신 6버튼)
 function renderPagination() {
     const box = document.getElementById('pagination-box');
     box.innerHTML = '';
-
     const createBtn = (text, target, cls='btn-outline-secondary') => {
         const btn = document.createElement('button');
         btn.className = `btn btn-page ${cls}`;
         btn.innerHTML = text;
-        
-        // 범위 체크
         if (target < 1) target = 1;
         if (target > lastPage) target = lastPage;
-        
-        // 현재 페이지면 비활성
         if (text === String(currentPage)) {
             btn.className = 'btn btn-page btn-danger';
             btn.disabled = true;
         }
-
-        btn.onclick = () => {
-            window.scrollTo(0,0);
-            fetchData(target);
-        };
+        btn.onclick = () => fetchData(target);
         return btn;
     };
-
-    // a. 맨처음으로 (1p)
-    box.appendChild(createBtn('<i class="bi bi-chevron-double-left"></i> 처음', 1));
-
-    // b. 10개 전 페이지
+    box.appendChild(createBtn('<i class="bi bi-chevron-double-left"></i>', 1));
     box.appendChild(createBtn('-10', currentPage - 10));
-
-    // c. 전 페이지
-    box.appendChild(createBtn('이전', currentPage - 1));
-
-    // (현재 페이지 표시용 - 버튼 아님)
+    box.appendChild(createBtn('Prev', currentPage - 1));
     const cur = document.createElement('span');
     cur.className = 'btn btn-danger disabled';
     cur.innerText = currentPage;
     box.appendChild(cur);
-
-    // d. 다음 페이지
-    box.appendChild(createBtn('다음', currentPage + 1));
-
-    // e. 10개 후 페이지
+    box.appendChild(createBtn('Next', currentPage + 1));
     box.appendChild(createBtn('+10', currentPage + 10));
-
-    // f. 맨끝페이지 (파싱된 마지막 페이지)
-    box.appendChild(createBtn('끝 <i class="bi bi-chevron-double-right"></i>', lastPage));
+    box.appendChild(createBtn('<i class="bi bi-chevron-double-right"></i>', lastPage));
 }
 
 async function play(url, title) {
@@ -227,18 +214,13 @@ async function play(url, title) {
     try {
         const res = await fetch(`/api/video?url=${encodeURIComponent(url)}`);
         const data = await res.json();
-        
         if (data.video_src) {
             document.getElementById('p-con').innerHTML = `<iframe src="${data.video_src}" style="width:100%; height:400px; border:none;" allowfullscreen></iframe>`;
             const btn = document.getElementById('d-btn');
             btn.href = data.video_src;
             btn.style.display = 'inline-block';
-        } else {
-            document.getElementById('p-con').innerHTML = '<p class="text-danger">영상을 찾을 수 없습니다.</p>';
         }
-    } catch (e) {
-        document.getElementById('p-con').innerHTML = '<p class="text-danger">에러 발생</p>';
-    }
+    } catch (e) {}
 }
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
